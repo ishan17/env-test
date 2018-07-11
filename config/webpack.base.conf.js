@@ -1,26 +1,35 @@
 const path = require('path')
 const webpack = require('webpack')
 // 压缩css
-const optimizeCss = require('optimize-css-assets-webpack-plugin');
+const optimizeCss = require('optimize-css-assets-webpack-plugin')
 // const CommonsChunkPlugin = require('webpack/lib/optimize/CommonsChunkPlugin')
-const ExtractTextPlugin = require ('extract-text-webpack-plugin')
+// const extractTextPlugin = require ('extract-text-webpack-plugin')
+// webpack@4+ css提取插件
+const miniCssExtractPlugin = require("mini-css-extract-plugin");
 // 引入模板插件
-const HtmlWebpackPlugin = require("html-webpack-plugin")
+const htmlWebpackPlugin = require("html-webpack-plugin")
 
 let htmlPlugins = []
 let entrys = {}
-const dirs = [
-    'index',
-    'detail'
-]
 
-// dist的目录结构 *.html、css、js、images
-dirs.forEach((page) => {
-    const htmlPlugin = new HtmlWebpackPlugin({
-        filename: `${page}.html`, // 输出到dist目录的文件名
-        template: path.resolve(__dirname, `../src/views/${page}.html`), // 源文件src中的文件路径
-        title: `${page}`,
-        chunks: [`${page}`, 'commons'],
+const pages = [{
+    title: '首页',
+    favicon: '',
+    page: 'index'
+},{
+    title: '详情',
+    favicon: '',
+    page: 'detail'
+}]
+
+// dist的目录结构 *.html、css、js、images   
+// 把所有生成html放在view目录下，如何更改link、script引入文件路径？？？
+pages.forEach((item) => {
+    const htmlPlugin = new htmlWebpackPlugin({
+        filename: `${item.page}.html`, // 输出到dist目录的文件名
+        template: path.resolve(__dirname, `../src/view/${item.page}.html`), // 源文件src中的文件路径
+        title: `${item.title}`,
+        chunks: [`${item.page}`],
         minify: {
             // "removeAttributeQuotes": true,
             "removeComments": true,
@@ -28,7 +37,7 @@ dirs.forEach((page) => {
         }
     })
     htmlPlugins.push(htmlPlugin)
-    entrys[page] = path.resolve(__dirname, `../src/js/${page}.js`)
+    entrys[item.page] = path.resolve(__dirname, `../src/js/${item.page}.js`)
 })
 
 module.exports = {
@@ -91,15 +100,10 @@ module.exports = {
                 // 使用一组Loader去处理scss文件
                 // 处理顺序为从后到前,即先交给sass-loader处理,再将结果交给css-loader,最后交给style-loader
                 // use: ['style-loader', 'css-loader', 'sass-loader'],
-                loaders: ExtractTextPlugin.extract({
-                    // use: ['css-loader', 'sass-loader']
-                    use: [{
-                        loader:'css-loader',
-                        options:{
-                            minimize: true  // css压缩
-                        }
-                    }, 'sass-loader']
-                }),
+                // loaders: extractTextPlugin.extract({
+                //     use: ['css-loader', 'sass-loader']
+                // }),
+                use: [miniCssExtractPlugin.loader, 'css-loader', 'sass-loader'],
                 exclude: path.resolve(__dirname, 'node_modules'),
             },{
                 test: /\.(gif|png|jpe?g|eot|woff|ttf|svg|pdf)$/,
@@ -166,9 +170,11 @@ module.exports = {
     plugins: [
         // ----热更新(HMR)不能和[chunkhash]同时使用
         new webpack.HotModuleReplacementPlugin(),
-        ...htmlPlugins,
         // 从.js中提取的css文件
-        new ExtractTextPlugin({
+        // new extractTextPlugin({
+        //     filename: `css/[name]_[hash:8].css`
+        // }),
+        new miniCssExtractPlugin({
             filename: `css/[name]_[hash:8].css`
         }),
         new optimizeCss({
@@ -186,5 +192,6 @@ module.exports = {
         //     name: 'common',
         //     chunks: ['index', 'detail']
         // }),
+        ...htmlPlugins,
     ]
 }
