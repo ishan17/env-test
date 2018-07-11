@@ -1,5 +1,7 @@
 const path = require('path')
 const webpack = require('webpack')
+// 拷贝静态资源
+const copyWebpackPlugin = require('copy-webpack-plugin')
 // 压缩css
 const optimizeCss = require('optimize-css-assets-webpack-plugin')
 // const CommonsChunkPlugin = require('webpack/lib/optimize/CommonsChunkPlugin')
@@ -170,6 +172,11 @@ module.exports = {
     plugins: [
         // ----热更新(HMR)不能和[chunkhash]同时使用
         new webpack.HotModuleReplacementPlugin(),
+        // 拷贝静态资源
+        new copyWebpackPlugin([{
+            from: path.resolve(__dirname,'../src/image/'),
+            to: path.resolve(__dirname, '../dist/image/')
+        }]),
         // 从.js中提取的css文件
         // new extractTextPlugin({
         //     filename: `css/[name]_[hash:8].css`
