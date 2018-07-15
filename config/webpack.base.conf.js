@@ -10,6 +10,7 @@ const optimizeCss = require('optimize-css-assets-webpack-plugin')
 const miniCssExtractPlugin = require("mini-css-extract-plugin");
 // 引入模板插件
 const htmlWebpackPlugin = require("html-webpack-plugin")
+const autoprefixer = require('autoprefixer');
 
 let htmlPlugins = []
 let entrys = {}
@@ -42,8 +43,17 @@ pages.forEach((item) => {
     entrys[item.page] = path.resolve(__dirname, `../src/js/${item.page}.js`)
 })
 
+const ENV = process.env.NODE_ENV || 'development';
+const IS_PROD = ENV === 'production';
+
+const SOURCE_DIR = path.resolve(__dirname, '../src');
+const OUTPUT_DIR = path.resolve(__dirname, '../dist');
+
 module.exports = {
-    mode: 'development', // production---js会被压缩
+    mode: ENV, // production---js会被压缩
+    target: 'web',
+    // 基础目录，绝对路径，用于从配置中解析入口起点(entry point)和加载器(loader)
+    context: SOURCE_DIR,
     // entry: {
     //     index: path.resolve(__dirname, '../src/js/index'),
     //     detail: path.resolve(__dirname, 'src/pages/detail/detail')
@@ -56,7 +66,8 @@ module.exports = {
         // 使用CommonChunkPlugin、使用import('path/to/module')动态加载等
         // chunkFilename: '[id]_[nam e].js',
         // 配置输出文件存放在本地的目录--绝对路径
-        path: path.resolve(__dirname,'../dist'),
+        // path: path.resolve(__dirname,'../dist'),
+        path: OUTPUT_DIR,
         // 配置发布到线上资源的URL前缀,为string类型。默认值是空字符串'',即使用相对路径
         publicPath: ''
     },
@@ -87,29 +98,102 @@ module.exports = {
                     // enforce: 'post'
                 }],
                 // 只命中src目录里的JavaScript文件,加快Webpack的搜索速度
-                include: path.resolve(__dirname ,'src')
+                include: path.resolve(__dirname ,'../src')
             },
             // {
             //     test: /\.css$/,
-            //     exclude: path.resolve(__dirname, 'node_modules'),
+            //     exclude: path.resolve(__dirname, '../node_modules'),
             //     use: [
             //         'style-loader',
             //         'css-loader'
             //     ]
             // },
+            // {
+            //     test: /\.scss$/,
+            //     // 使用一组Loader去处理scss文件
+            //     // 处理顺序为从后到前,即先交给sass-loader处理,再将结果交给css-loader,最后交给style-loader
+            //     // use: ['style-loader', 'css-loader', 'sass-loader'],
+            //     // loaders: extractTextPlugin.extract({
+            //     //     use: ['css-loader', 'sass-loader']
+            //     // }),
+            //     use: [miniCssExtractPlugin.loader, 'css-loader', 'sass-loader'],
+            //     exclude: path.resolve(__dirname, '../node_modules'),
+            // }
             {
                 test: /\.scss$/,
-                // 使用一组Loader去处理scss文件
-                // 处理顺序为从后到前,即先交给sass-loader处理,再将结果交给css-loader,最后交给style-loader
-                // use: ['style-loader', 'css-loader', 'sass-loader'],
-                // loaders: extractTextPlugin.extract({
-                //     use: ['css-loader', 'sass-loader']
-                // }),
-                use: [miniCssExtractPlugin.loader, 'css-loader', 'sass-loader'],
-                exclude: path.resolve(__dirname, 'node_modules'),
+                exclude: /node_modules/,
+                use: IS_PROD ? [
+                    miniCssExtractPlugin.loader,
+                  {
+                    loader: 'css-loader',
+                    options: { minimize: true },
+                  },
+                  {
+                    loader: 'postcss-loader',
+                    options: {
+                      plugins: () => [autoprefixer({ browsers: 'last 5 versions' })],
+                      sourceMap: true,
+                    },
+                  },
+                  {
+                    loader: 'sass-loader',
+                    options: {
+                      includePaths: [
+                        SOURCE_DIR,
+                      ],
+                    },
+                  },
+                ] : [
+                  {
+                    loader: 'style-loader',
+                    options: { singleton: true },
+                  },
+                  'css-loader',
+                  {
+                    loader: 'postcss-loader',
+                    options: {
+                      plugins: () => [autoprefixer({ browsers: 'last 5 versions' })],
+                      sourceMap: true,
+                    },
+                  },
+                  {
+                    loader: 'sass-loader',
+                    options: {
+                      includePaths: [
+                        SOURCE_DIR,
+                      ],
+                    },
+                  },
+                ],
+            }, {
+                test: /\.css$/,
+                include: /node_modules/,
+                use: [
+                    miniCssExtractPlugin.loader,
+                  'css-loader',
+                  {
+                    loader: 'postcss-loader',
+                    options: {
+                      plugins: () => [autoprefixer({ browsers: 'last 5 versions' })],
+                      sourceMap: true,
+                    },
+                  },
+                ],
             },{
                 test: /\.(gif|png|jpe?g|eot|woff|ttf|svg|pdf)$/,
-                use: ['file-loader']
+                use: IS_PROD ? {
+                    loader: 'file-loader',
+                    options: {
+                      name: '[name].[hash:8].[ext]',
+                      outputPath: 'image/',
+                    },
+                } : {
+                    loader: 'url-loader',
+                    options: {
+                        // limit: 12000,
+                        name: 'image/[name].[ext]'
+                    }
+                }
             }
         ],
         // noParse配置项可以让Webpack忽略对部分没采用模块化的文件的递归解析和处理,这样做的好处是能提高构建性能
@@ -146,6 +230,9 @@ module.exports = {
         hot: true,
         inline: true,
         host: 'localhost',
+        port: process.env.PORT || 8080,
+        contentBase: SOURCE_DIR,
+        // historyApiFallback: true,
         // open: true,
     },
     // 只有在开启监昕模式时,watchOptions才有意义
@@ -159,7 +246,7 @@ module.exports = {
         // 判断文件是否发生变化是通过不停地询问系统指定文件有没有变化实现的 默认每秒次
         poll: 1000
     },
-    devtool: 'cheap-module-source-map',
+    devtool: IS_PROD ? 'source-map' : 'eval-source-map',
     // Externals用来告诉在Webpack,要构建的代码中使用了哪些不用被打包的模块,也就是说这些模板是外部环境提供的例如jquery
     externals: {
         // 将导入语句里的jquery替换成运行环境里的全局变量jQuery

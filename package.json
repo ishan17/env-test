@@ -5,13 +5,16 @@
   "main": "index.js",
   "scripts": {
     "dev": "webpack-dev-server --progress --colors --config ./config/webpack.base.conf.js",
-    "build": "webpack --mode production --config ./config/webpack.base.conf.js"
+    "build": "npm run clean && webpack --mode production --config ./config/webpack.base.conf.js",
+    "clean": "rm -rf dist/"
   },
   "author": "ishan",
   "license": "ISC",
   "devDependencies": {
+    "autoprefixer": "^8.6.5",
     "babel-core": "^6.26.3",
     "babel-loader": "^7.1.5",
+    "babel-plugin-transform-runtime": "^6.23.0",
     "babel-preset-env": "^1.7.0",
     "babel-preset-stage-2": "^6.24.1",
     "copy-webpack-plugin": "^4.5.2",
@@ -24,6 +27,7 @@
     "mini-css-extract-plugin": "^0.4.1",
     "node-sass": "^4.9.2",
     "optimize-css-assets-webpack-plugin": "^4.0.3",
+    "postcss-loader": "^2.1.6",
     "sass-loader": "^7.0.3",
     "style-loader": "^0.21.0",
     "webpack": "^4.15.1",
